@@ -1,48 +1,43 @@
-const API_BASE_URL = "https://api.quran.com/api/v4"
-
-interface ApiResponse<T> {
-  data: T
-}
-
-interface Chapter {
+// Define the types for Surah, Recitation, Language, Translation, and Verse.  These are placeholders and should be replaced with your actual type definitions.
+interface Surah {
   id: number
-  name_simple: string
-  name_arabic: string
-  translated_name: {
-    name: string
-  }
+  name: string
+  // Add other properties as needed
 }
 
 interface Recitation {
   id: number
-  reciter_name: string
+  name: string
+  // Add other properties as needed
 }
 
 interface Language {
-  iso_code: string
-  native_name: string
+  id: string
+  name: string
+  // Add other properties as needed
 }
 
 interface Translation {
   id: number
   name: string
+  // Add other properties as needed
 }
 
 interface Verse {
   id: number
-  text_uthmani: string
-  translations: {
-    text: string
-  }[]
+  text: string
+  // Add other properties as needed
 }
 
-export async function fetchSurahs(language = "en"): Promise<Chapter[]> {
+const API_BASE_URL = "https://api.quran.com/api/v4"
+
+export async function fetchSurahs(language = "en"): Promise<Surah[]> {
   const response = await fetch(`${API_BASE_URL}/chapters?language=${language}`)
   if (!response.ok) {
     throw new Error("Failed to fetch surahs")
   }
-  const data = (await response.json()) as ApiResponse<Chapter[]>
-  return data.data
+  const data = await response.json()
+  return data.chapters
 }
 
 export async function fetchRecitations(): Promise<Recitation[]> {
@@ -50,8 +45,8 @@ export async function fetchRecitations(): Promise<Recitation[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch recitations")
   }
-  const data = (await response.json()) as ApiResponse<Recitation[]>
-  return data.data
+  const data = await response.json()
+  return data.recitations
 }
 
 export async function fetchAudioUrl(recitationId: number, chapterId: number): Promise<string> {
@@ -59,7 +54,7 @@ export async function fetchAudioUrl(recitationId: number, chapterId: number): Pr
   if (!response.ok) {
     throw new Error("Failed to fetch audio URL")
   }
-  const data = (await response.json()) as { audio_file: { audio_url: string } }
+  const data = await response.json()
   return data.audio_file.audio_url
 }
 
@@ -68,8 +63,8 @@ export async function fetchLanguages(): Promise<Language[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch languages")
   }
-  const data = (await response.json()) as ApiResponse<Language[]>
-  return data.data
+  const data = await response.json()
+  return data.languages
 }
 
 export async function fetchTranslations(language = "en"): Promise<Translation[]> {
@@ -77,18 +72,18 @@ export async function fetchTranslations(language = "en"): Promise<Translation[]>
   if (!response.ok) {
     throw new Error("Failed to fetch translations")
   }
-  const data = (await response.json()) as ApiResponse<Translation[]>
-  return data.data
+  const data = await response.json()
+  return data.translations
 }
 
 export async function fetchVerses(chapterId: number, translationId: number, language = "en"): Promise<Verse[]> {
   const response = await fetch(
-    `${API_BASE_URL}/verses/by_chapter/${chapterId}?language=${language}&translations=${translationId}&fields=text_uthmani`,
+    `${API_BASE_URL}/verses/by_chapter/${chapterId}?language=${language}&translations=${translationId}&fields=text_uthmani,audio&audio=1`,
   )
   if (!response.ok) {
     throw new Error("Failed to fetch verses")
   }
-  const data = (await response.json()) as ApiResponse<Verse[]>
-  return data.data
+  const data = await response.json()
+  return data.verses
 }
 
