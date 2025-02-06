@@ -5,6 +5,7 @@ export interface Surah {
   translated_name: {
     name: string
   }
+  verses_count: number
 }
 
 export interface Recitation {
@@ -24,9 +25,26 @@ export interface Translation {
 
 export interface Verse {
   id: number
+  verse_key: string
   text_uthmani: string
   translations: {
     text: string
   }[]
+  audio: {
+    url: string
+  }
+}
+
+export interface Bookmark {
+  surahId: number
+  verseId: number
+  timestamp: number
+}
+
+export interface ReadingGoal {
+  versesPerDay: number
+  startDate: string
+  lastReadDate: string
+  totalVersesRead: number
 }
 
