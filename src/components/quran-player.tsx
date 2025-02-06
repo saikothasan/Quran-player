@@ -45,7 +45,7 @@ export default function QuranPlayer() {
           fetchSurahs(currentLanguage.iso_code),
           fetchRecitations(),
           fetchLanguages(),
-          fetchTranslations(),
+          fetchTranslations(currentLanguage.iso_code),
         ])
         setSurahs(surahsData)
         setFilteredSurahs(surahsData)
@@ -67,13 +67,13 @@ export default function QuranPlayer() {
     loadData()
     loadBookmarks()
     loadReadingGoal()
-  }, [toast])
+  }, [currentLanguage.iso_code, toast])
 
   useEffect(() => {
-    if (currentSurah && currentRecitation) {
+    if (currentSurah && currentRecitation && currentTranslation) {
       loadVerses()
     }
-  }, [currentSurah, currentRecitation])
+  }, [currentSurah, currentRecitation, currentTranslation])
 
   async function loadVerses() {
     try {
