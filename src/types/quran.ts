@@ -35,7 +35,7 @@ export interface Verse {
   }
 }
 
-export interface Bookmark {
+export interface QuranBookmark {
   surahId: number
   verseId: number
   timestamp: number
