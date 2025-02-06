@@ -42,7 +42,7 @@ export default function QuranPlayer() {
     async function loadData() {
       try {
         const [surahsData, recitationsData, languagesData, translationsData] = await Promise.all([
-          fetchSurahs(),
+          fetchSurahs(currentLanguage.iso_code),
           fetchRecitations(),
           fetchLanguages(),
           fetchTranslations(),
