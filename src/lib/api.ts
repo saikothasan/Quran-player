@@ -1,33 +1,4 @@
-// Define the types for Surah, Recitation, Language, Translation, and Verse.  These are placeholders and should be replaced with your actual type definitions.
-interface Surah {
-  id: number
-  name: string
-  // Add other properties as needed
-}
-
-interface Recitation {
-  id: number
-  name: string
-  // Add other properties as needed
-}
-
-interface Language {
-  id: string
-  name: string
-  // Add other properties as needed
-}
-
-interface Translation {
-  id: number
-  name: string
-  // Add other properties as needed
-}
-
-interface Verse {
-  id: number
-  text: string
-  // Add other properties as needed
-}
+import type { Surah, Recitation, Language, Translation, Verse } from "@/types/quran"
 
 const API_BASE_URL = "https://api.quran.com/api/v4"
 
@@ -86,4 +57,3 @@ export async function fetchVerses(chapterId: number, translationId: number, lang
   const data = await response.json()
   return data.verses
 }
-
