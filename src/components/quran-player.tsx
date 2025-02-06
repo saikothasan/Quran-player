@@ -41,9 +41,9 @@ export default function QuranPlayer() {
         setRecitations(recitationsData)
         setLanguages(languagesData)
         setTranslations(translationsData)
-        setCurrentSurah(surahsData[0])
-        setCurrentRecitation(recitationsData[0])
-        setCurrentTranslation(translationsData[0])
+        setCurrentSurah(surahsData[0] || null)
+        setCurrentRecitation(recitationsData[0] || null)
+        setCurrentTranslation(translationsData[0] || null)
       } catch (error) {
         console.error("Error loading initial data:", error)
       }
@@ -67,8 +67,8 @@ export default function QuranPlayer() {
         setSurahs(surahsData)
         setFilteredSurahs(surahsData)
         setTranslations(translationsData)
-        setCurrentSurah(surahsData[0])
-        setCurrentTranslation(translationsData[0])
+        setCurrentSurah(surahsData[0] || null)
+        setCurrentTranslation(translationsData[0] || null)
       } catch (error) {
         console.error("Error updating surahs and translations:", error)
       }
@@ -96,8 +96,10 @@ export default function QuranPlayer() {
 
   async function loadVerses() {
     try {
-      const versesData = await fetchVerses(currentSurah.id, currentTranslation.id, currentLanguage.iso_code)
-      setVerses(versesData)
+      if (currentSurah && currentTranslation) {
+        const versesData = await fetchVerses(currentSurah.id, currentTranslation.id, currentLanguage.iso_code)
+        setVerses(versesData)
+      }
     } catch (error) {
       console.error("Error loading verses:", error)
     }
@@ -115,15 +117,19 @@ export default function QuranPlayer() {
   }
 
   const playPrevious = () => {
-    const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
-    const previousIndex = (currentIndex - 1 + surahs.length) % surahs.length
-    setCurrentSurah(surahs[previousIndex])
+    if (currentSurah) {
+      const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
+      const previousIndex = (currentIndex - 1 + surahs.length) % surahs.length
+      setCurrentSurah(surahs[previousIndex])
+    }
   }
 
   const playNext = () => {
-    const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
-    const nextIndex = (currentIndex + 1) % surahs.length
-    setCurrentSurah(surahs[nextIndex])
+    if (currentSurah) {
+      const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
+      const nextIndex = (currentIndex + 1) % surahs.length
+      setCurrentSurah(surahs[nextIndex])
+    }
   }
 
   const handleTimeUpdate = () => {
@@ -140,13 +146,13 @@ export default function QuranPlayer() {
     }
   }
 
-  const formatTime = (time) => {
+  const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
-  const handleSearch = (event) => {
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = event.target.value.toLowerCase()
     setSearchTerm(searchTerm)
     const filtered = surahs.filter(
@@ -166,7 +172,12 @@ export default function QuranPlayer() {
           <div className="mb-4 space-y-2">
             <Select
               value={currentLanguage.iso_code}
-              onValueChange={(value) => setCurrentLanguage(languages.find((lang) => lang.iso_code === value))}
+              onValueChange={(value) => {
+                const newLanguage = languages.find((lang) => lang.iso_code === value)
+                if (newLanguage) {
+                  setCurrentLanguage(newLanguage)
+                }
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Language" />
@@ -221,7 +232,12 @@ export default function QuranPlayer() {
           <div className="mb-4 space-y-2">
             <Select
               value={currentRecitation ? currentRecitation.id.toString() : ""}
-              onValueChange={(value) => setCurrentRecitation(recitations.find((r) => r.id === Number.parseInt(value)))}
+              onValueChange={(value) => {
+                const newRecitation = recitations.find((r) => r.id === Number.parseInt(value))
+                if (newRecitation) {
+                  setCurrentRecitation(newRecitation)
+                }
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Reciter" />
@@ -236,9 +252,12 @@ export default function QuranPlayer() {
             </Select>
             <Select
               value={currentTranslation ? currentTranslation.id.toString() : ""}
-              onValueChange={(value) =>
-                setCurrentTranslation(translations.find((t) => t.id === Number.parseInt(value)))
-              }
+              onValueChange={(value) => {
+                const newTranslation = translations.find((t) => t.id === Number.parseInt(value))
+                if (newTranslation) {
+                  setCurrentTranslation(newTranslation)
+                }
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Translation" />
@@ -309,7 +328,7 @@ export default function QuranPlayer() {
           {verses.map((verse) => (
             <div key={verse.id} className="rounded-lg bg-emerald-50 p-4 dark:bg-emerald-900 dark:text-emerald-100">
               <p className="text-sm font-semibold">{verse.text_uthmani}</p>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{verse.translations[0].text}</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{verse.translations[0]?.text}</p>
             </div>
           ))}
         </div>
