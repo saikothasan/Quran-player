@@ -1,36 +1,51 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
-import { fetchSurahs, fetchRecitations, fetchAudioUrl, fetchLanguages } from "@/lib/api"
+import { fetchSurahs, fetchRecitations, fetchAudioUrl, fetchLanguages, fetchTranslations, fetchVerses } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export default function QuranPlayer() {
   const [surahs, setSurahs] = useState([])
   const [recitations, setRecitations] = useState([])
   const [languages, setLanguages] = useState([])
+  const [translations, setTranslations] = useState([])
   const [currentSurah, setCurrentSurah] = useState(null)
   const [currentRecitation, setCurrentRecitation] = useState(null)
   const [currentLanguage, setCurrentLanguage] = useState({ iso_code: "en", native_name: "English" })
+  const [currentTranslation, setCurrentTranslation] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [verses, setVerses] = useState([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredSurahs, setFilteredSurahs] = useState([])
   const audioRef = useRef(null)
 
   useEffect(() => {
     async function loadData() {
-      const [surahsData, recitationsData, languagesData] = await Promise.all([
-        fetchSurahs(),
-        fetchRecitations(),
-        fetchLanguages(),
-      ])
-      setSurahs(surahsData)
-      setRecitations(recitationsData)
-      setLanguages(languagesData)
-      setCurrentSurah(surahsData[0])
-      setCurrentRecitation(recitationsData[0])
+      try {
+        const [surahsData, recitationsData, languagesData, translationsData] = await Promise.all([
+          fetchSurahs(),
+          fetchRecitations(),
+          fetchLanguages(),
+          fetchTranslations(),
+        ])
+        setSurahs(surahsData)
+        setFilteredSurahs(surahsData)
+        setRecitations(recitationsData)
+        setLanguages(languagesData)
+        setTranslations(translationsData)
+        setCurrentSurah(surahsData[0])
+        setCurrentRecitation(recitationsData[0])
+        setCurrentTranslation(translationsData[0])
+      } catch (error) {
+        console.error("Error loading initial data:", error)
+      }
     }
     loadData()
   }, [])
@@ -43,17 +58,46 @@ export default function QuranPlayer() {
 
   useEffect(() => {
     async function updateSurahs() {
-      const surahsData = await fetchSurahs(currentLanguage.iso_code)
-      setSurahs(surahsData)
-      setCurrentSurah(surahsData[0])
+      try {
+        const [surahsData, translationsData] = await Promise.all([
+          fetchSurahs(currentLanguage.iso_code),
+          fetchTranslations(currentLanguage.iso_code),
+        ])
+        setSurahs(surahsData)
+        setFilteredSurahs(surahsData)
+        setTranslations(translationsData)
+        setCurrentSurah(surahsData[0])
+        setCurrentTranslation(translationsData[0])
+      } catch (error) {
+        console.error("Error updating surahs and translations:", error)
+      }
     }
     updateSurahs()
   }, [currentLanguage])
 
+  useEffect(() => {
+    if (currentSurah && currentTranslation) {
+      loadVerses()
+    }
+  }, [currentSurah, currentTranslation])
+
   async function loadAudio() {
-    const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
-    audioRef.current.src = audioUrl
-    audioRef.current.load()
+    try {
+      const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
+      audioRef.current.src = audioUrl
+      audioRef.current.load()
+    } catch (error) {
+      console.error("Error loading audio:", error)
+    }
+  }
+
+  async function loadVerses() {
+    try {
+      const versesData = await fetchVerses(currentSurah.id, currentTranslation.id, currentLanguage.iso_code)
+      setVerses(versesData)
+    } catch (error) {
+      console.error("Error loading verses:", error)
+    }
   }
 
   const togglePlay = () => {
@@ -93,12 +137,24 @@ export default function QuranPlayer() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
+  const handleSearch = (event) => {
+    const searchTerm = event.target.value.toLowerCase()
+    setSearchTerm(searchTerm)
+    const filtered = surahs.filter(
+      (surah) =>
+        surah.name_simple.toLowerCase().includes(searchTerm) ||
+        surah.name_arabic.toLowerCase().includes(searchTerm) ||
+        surah.translated_name.name.toLowerCase().includes(searchTerm),
+    )
+    setFilteredSurahs(filtered)
+  }
+
   return (
     <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <div>
           <h2 className="mb-4 text-2xl font-semibold text-emerald-800 dark:text-emerald-200">Surah List</h2>
-          <div className="mb-4">
+          <div className="mb-4 space-y-2">
             <Select
               value={currentLanguage.iso_code}
               onValueChange={(value) => setCurrentLanguage(languages.find((lang) => lang.iso_code === value))}
@@ -114,9 +170,21 @@ export default function QuranPlayer() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="text"
+                placeholder="Search surahs..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="flex-grow"
+              />
+              <Button size="icon">
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <ul className="max-h-96 space-y-2 overflow-y-auto scrollbar-hide">
-            {surahs.map((surah) => (
+            {filteredSurahs.map((surah) => (
               <li key={surah.id}>
                 <button
                   onClick={() => setCurrentSurah(surah)}
@@ -141,7 +209,7 @@ export default function QuranPlayer() {
               {currentRecitation ? `Reciter: ${currentRecitation.reciter_name}` : "Select a Reciter"}
             </p>
           </div>
-          <div className="mb-4">
+          <div className="mb-4 space-y-2">
             <Select
               value={currentRecitation ? currentRecitation.id.toString() : ""}
               onValueChange={(value) => setCurrentRecitation(recitations.find((r) => r.id === Number.parseInt(value)))}
@@ -153,6 +221,23 @@ export default function QuranPlayer() {
                 {recitations.map((recitation) => (
                   <SelectItem key={recitation.id} value={recitation.id.toString()}>
                     {recitation.reciter_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={currentTranslation ? currentTranslation.id.toString() : ""}
+              onValueChange={(value) =>
+                setCurrentTranslation(translations.find((t) => t.id === Number.parseInt(value)))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Translation" />
+              </SelectTrigger>
+              <SelectContent>
+                {translations.map((translation) => (
+                  <SelectItem key={translation.id} value={translation.id.toString()}>
+                    {translation.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -203,6 +288,17 @@ export default function QuranPlayer() {
         onEnded={playNext}
         onLoadedMetadata={() => setDuration(audioRef.current.duration)}
       />
+      <div className="mt-8">
+        <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Verses</h4>
+        <div className="max-h-96 space-y-4 overflow-y-auto scrollbar-hide">
+          {verses.map((verse) => (
+            <div key={verse.id} className="rounded-lg bg-emerald-50 p-4 dark:bg-emerald-900 dark:text-emerald-100">
+              <p className="text-sm font-semibold">{verse.text_uthmani}</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{verse.translations[0].text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
