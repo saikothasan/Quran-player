@@ -1,15 +1,25 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Bookmark, Share2, Target } from "lucide-react"
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  Search,
+  BookmarkIcon as QuranBookmark,
+  Share2,
+  Target,
+} from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { fetchSurahs, fetchRecitations, fetchLanguages, fetchTranslations, fetchVerses } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DarkModeToggle } from "@/components/dark-mode-toggle"
-import type { Surah, Recitation, Language, Translation, Verse, Bookmark, ReadingGoal } from "@/types/quran"
-import { useToast } from "@/hooks/use-toast"
+import type { Surah, Recitation, Language, Translation, Verse, QuranBookmark, ReadingGoal } from "@/types/quran"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function QuranPlayer() {
   const [surahs, setSurahs] = useState<Surah[]>([])
@@ -28,7 +38,7 @@ export default function QuranPlayer() {
   const [currentVerse, setCurrentVerse] = useState<Verse | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredSurahs, setFilteredSurahs] = useState<Surah[]>([])
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [bookmarks, setBookmarks] = useState<QuranBookmark[]>([])
   const [readingGoal, setReadingGoal] = useState<ReadingGoal>({
     versesPerDay: 10,
     startDate: new Date().toISOString().split("T")[0],
@@ -171,7 +181,7 @@ export default function QuranPlayer() {
           description: `Removed bookmark for Surah ${currentSurah.name_simple}, Verse ${currentVerse.verse_key}`,
         })
       } else {
-        const newBookmark: Bookmark = {
+        const newBookmark: QuranBookmark = {
           surahId: currentSurah.id,
           verseId: currentVerse.id,
           timestamp: Date.now(),
@@ -434,7 +444,7 @@ export default function QuranPlayer() {
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{currentVerse.translations[0]?.text}</p>
             <div className="mt-4 flex justify-end space-x-2">
               <Button onClick={toggleBookmark} size="sm" variant="outline">
-                <Bookmark className="mr-2 h-4 w-4" />
+                <QuranBookmark className="mr-2 h-4 w-4" />
                 Bookmark
               </Button>
               <Button onClick={shareVerse} size="sm" variant="outline">
