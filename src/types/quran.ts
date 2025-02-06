@@ -2,10 +2,12 @@ export interface Surah {
   id: number
   name_simple: string
   name_arabic: string
+  name_complex: string
+  verses_count: number
   translated_name: {
     name: string
+    language_name: string
   }
-  verses_count: number
 }
 
 export interface Recitation {
