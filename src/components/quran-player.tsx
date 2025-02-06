@@ -25,7 +25,7 @@ export default function QuranPlayer() {
   const [verses, setVerses] = useState<Verse[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredSurahs, setFilteredSurahs] = useState<Surah[]>([])
-  const audioRef = useRef(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -87,7 +87,7 @@ export default function QuranPlayer() {
       if (currentRecitation && currentSurah && audioRef.current) {
         const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
         audioRef.current.src = audioUrl
-        audioRef.current.load()
+        await audioRef.current.load()
       }
     } catch (error) {
       console.error("Error loading audio:", error)
@@ -104,12 +104,14 @@ export default function QuranPlayer() {
   }
 
   const togglePlay = () => {
-    if (isPlaying) {
-      audioRef.current?.pause()
-    } else {
-      audioRef.current?.play()
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play().catch((error) => console.error("Error playing audio:", error))
+      }
+      setIsPlaying(!isPlaying)
     }
-    setIsPlaying(!isPlaying)
   }
 
   const playPrevious = () => {
@@ -125,11 +127,13 @@ export default function QuranPlayer() {
   }
 
   const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current?.currentTime || 0)
-    setDuration(audioRef.current?.duration || 0)
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+      setDuration(audioRef.current.duration)
+    }
   }
 
-  const handleVolumeChange = (newVolume) => {
+  const handleVolumeChange = (newVolume: number[]) => {
     setVolume(newVolume[0])
     if (audioRef.current) {
       audioRef.current.volume = newVolume[0]
@@ -293,7 +297,11 @@ export default function QuranPlayer() {
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onEnded={playNext}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+        onLoadedMetadata={() => {
+          if (audioRef.current) {
+            setDuration(audioRef.current.duration)
+          }
+        }}
       />
       <div className="mt-8">
         <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Verses</h4>
