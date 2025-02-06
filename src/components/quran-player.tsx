@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DarkModeToggle } from "@/components/dark-mode-toggle"
 import type { Surah, Recitation, Language, Translation, Verse, Bookmark, ReadingGoal } from "@/types/quran"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 
 export default function QuranPlayer() {
   const [surahs, setSurahs] = useState<Surah[]>([])
@@ -36,6 +36,7 @@ export default function QuranPlayer() {
     totalVersesRead: 0,
   })
   const audioRef = useRef<HTMLAudioElement>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function loadData() {
@@ -51,9 +52,9 @@ export default function QuranPlayer() {
         setRecitations(recitationsData)
         setLanguages(languagesData)
         setTranslations(translationsData)
-        setCurrentSurah(surahsData[0] || null)
-        setCurrentRecitation(recitationsData[0] || null)
-        setCurrentTranslation(translationsData[0] || null)
+        if (surahsData.length > 0) setCurrentSurah(surahsData[0])
+        if (recitationsData.length > 0) setCurrentRecitation(recitationsData[0])
+        if (translationsData.length > 0) setCurrentTranslation(translationsData[0])
       } catch (error) {
         console.error("Error loading initial data:", error)
         toast({
@@ -66,44 +67,20 @@ export default function QuranPlayer() {
     loadData()
     loadBookmarks()
     loadReadingGoal()
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     if (currentSurah && currentRecitation) {
       loadVerses()
     }
-  }, [currentSurah, currentRecitation]) // Removed unnecessary dependency: currentTranslation
-
-  useEffect(() => {
-    async function updateSurahs() {
-      try {
-        const [surahsData, translationsData] = await Promise.all([
-          fetchSurahs(currentLanguage.iso_code),
-          fetchTranslations(currentLanguage.iso_code),
-        ])
-        setSurahs(surahsData)
-        setFilteredSurahs(surahsData)
-        setTranslations(translationsData)
-        setCurrentSurah(surahsData[0] || null)
-        setCurrentTranslation(translationsData[0] || null)
-      } catch (error) {
-        console.error("Error updating surahs and translations:", error)
-        toast({
-          title: "Error",
-          description: "Failed to update surahs and translations. Please try again.",
-          variant: "destructive",
-        })
-      }
-    }
-    updateSurahs()
-  }, [currentLanguage])
+  }, [currentSurah, currentRecitation])
 
   async function loadVerses() {
     try {
       if (currentSurah && currentTranslation) {
         const versesData = await fetchVerses(currentSurah.id, currentTranslation.id, currentLanguage.iso_code)
         setVerses(versesData)
-        setCurrentVerse(versesData[0] || null)
+        if (versesData.length > 0) setCurrentVerse(versesData[0])
       }
     } catch (error) {
       console.error("Error loading verses:", error)
@@ -120,7 +97,14 @@ export default function QuranPlayer() {
       if (isPlaying) {
         audioRef.current.pause()
       } else {
-        audioRef.current.play().catch((error) => console.error("Error playing audio:", error))
+        audioRef.current.play().catch((error) => {
+          console.error("Error playing audio:", error)
+          toast({
+            title: "Error",
+            description: "Failed to play audio. Please try again.",
+            variant: "destructive",
+          })
+        })
       }
       setIsPlaying(!isPlaying)
     }
@@ -150,9 +134,10 @@ export default function QuranPlayer() {
   }
 
   const handleVolumeChange = (newVolume: number[]) => {
-    setVolume(newVolume[0])
+    const volumeValue = newVolume[0]
+    setVolume(volumeValue)
     if (audioRef.current) {
-      audioRef.current.volume = newVolume[0]
+      audioRef.current.volume = volumeValue
     }
   }
 
@@ -205,13 +190,22 @@ export default function QuranPlayer() {
   const loadBookmarks = () => {
     const savedBookmarks = localStorage.getItem("bookmarks")
     if (savedBookmarks) {
-      setBookmarks(JSON.parse(savedBookmarks))
+      try {
+        setBookmarks(JSON.parse(savedBookmarks))
+      } catch (error) {
+        console.error("Error parsing bookmarks:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load bookmarks. Please try again.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
   const shareVerse = () => {
     if (currentSurah && currentVerse) {
-      const shareText = `Quran ${currentVerse.verse_key}: ${currentVerse.translations[0].text}`
+      const shareText = `Quran ${currentVerse.verse_key}: ${currentVerse.translations[0]?.text || ""}`
       if (navigator.share) {
         navigator
           .share({
@@ -230,6 +224,11 @@ export default function QuranPlayer() {
           },
           (err) => {
             console.error("Could not copy text: ", err)
+            toast({
+              title: "Error",
+              description: "Failed to copy verse. Please try again.",
+              variant: "destructive",
+            })
           },
         )
       }
@@ -257,7 +256,16 @@ export default function QuranPlayer() {
   const loadReadingGoal = () => {
     const savedGoal = localStorage.getItem("readingGoal")
     if (savedGoal) {
-      setReadingGoal(JSON.parse(savedGoal))
+      try {
+        setReadingGoal(JSON.parse(savedGoal))
+      } catch (error) {
+        console.error("Error parsing reading goal:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load reading goal. Please try again.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -409,7 +417,7 @@ export default function QuranPlayer() {
       </div>
       <audio
         ref={audioRef}
-        src={currentVerse?.audio.url}
+        src={currentVerse?.audio?.url}
         onTimeUpdate={handleTimeUpdate}
         onEnded={playNext}
         onLoadedMetadata={() => {
