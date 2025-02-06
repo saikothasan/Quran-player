@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DarkModeToggle } from "@/components/dark-mode-toggle"
 import type { Surah, Recitation, Language, Translation, Verse, QuranBookmark, ReadingGoal } from "@/types/quran"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 
 export default function QuranPlayer() {
   const [surahs, setSurahs] = useState<Surah[]>([])
