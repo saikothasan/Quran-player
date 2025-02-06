@@ -36,3 +36,23 @@ export async function fetchLanguages() {
   return data.languages
 }
 
+export async function fetchTranslations(language = "en") {
+  const response = await fetch(`${API_BASE_URL}/resources/translations?language=${language}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch translations")
+  }
+  const data = await response.json()
+  return data.translations
+}
+
+export async function fetchVerses(chapterId: number, translationId: number, language = "en") {
+  const response = await fetch(
+    `${API_BASE_URL}/verses/by_chapter/${chapterId}?language=${language}&translations=${translationId}&fields=text_uthmani`,
+  )
+  if (!response.ok) {
+    throw new Error("Failed to fetch verses")
+  }
+  const data = await response.json()
+  return data.verses
+}
+
