@@ -84,7 +84,7 @@ export default function QuranPlayer() {
 
   async function loadAudio() {
     try {
-      if (currentRecitation && currentSurah) {
+      if (currentRecitation && currentSurah && audioRef.current) {
         const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
         audioRef.current.src = audioUrl
         audioRef.current.load()
@@ -105,9 +105,9 @@ export default function QuranPlayer() {
 
   const togglePlay = () => {
     if (isPlaying) {
-      audioRef.current.pause()
+      audioRef.current?.pause()
     } else {
-      audioRef.current.play()
+      audioRef.current?.play()
     }
     setIsPlaying(!isPlaying)
   }
@@ -125,13 +125,15 @@ export default function QuranPlayer() {
   }
 
   const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current.currentTime)
-    setDuration(audioRef.current.duration)
+    setCurrentTime(audioRef.current?.currentTime || 0)
+    setDuration(audioRef.current?.duration || 0)
   }
 
   const handleVolumeChange = (newVolume) => {
     setVolume(newVolume[0])
-    audioRef.current.volume = newVolume[0]
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume[0]
+    }
   }
 
   const formatTime = (time) => {
@@ -271,7 +273,9 @@ export default function QuranPlayer() {
           max={duration}
           step={1}
           onValueChange={(value) => {
-            audioRef.current.currentTime = value[0]
+            if (audioRef.current) {
+              audioRef.current.currentTime = value[0]
+            }
             setCurrentTime(value[0])
           }}
           className="w-full"
@@ -289,7 +293,7 @@ export default function QuranPlayer() {
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onEnded={playNext}
-        onLoadedMetadata={() => setDuration(audioRef.current.duration)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
       />
       <div className="mt-8">
         <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Verses</h4>
