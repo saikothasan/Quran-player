@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, SkipBack, SkipForward, Volume2, Search } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Bookmark, Share2, Target } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
-import { fetchSurahs, fetchRecitations, fetchAudioUrl, fetchLanguages, fetchTranslations, fetchVerses } from "@/lib/api"
+import { fetchSurahs, fetchRecitations, fetchLanguages, fetchTranslations, fetchVerses } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import type { Surah, Recitation, Language, Translation, Verse } from "@/types/quran"
+import { DarkModeToggle } from "@/components/dark-mode-toggle"
+import type { Surah, Recitation, Language, Translation, Verse, Bookmark, ReadingGoal } from "@/types/quran"
+import { toast } from "@/components/ui/use-toast"
 
 export default function QuranPlayer() {
   const [surahs, setSurahs] = useState<Surah[]>([])
@@ -23,8 +25,16 @@ export default function QuranPlayer() {
   const [currentTime, setCurrentTime] = useState(0)
   const [volume, setVolume] = useState(1)
   const [verses, setVerses] = useState<Verse[]>([])
+  const [currentVerse, setCurrentVerse] = useState<Verse | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredSurahs, setFilteredSurahs] = useState<Surah[]>([])
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [readingGoal, setReadingGoal] = useState<ReadingGoal>({
+    versesPerDay: 10,
+    startDate: new Date().toISOString().split("T")[0],
+    lastReadDate: new Date().toISOString().split("T")[0],
+    totalVersesRead: 0,
+  })
   const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
@@ -46,16 +56,23 @@ export default function QuranPlayer() {
         setCurrentTranslation(translationsData[0] || null)
       } catch (error) {
         console.error("Error loading initial data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load initial data. Please try again.",
+          variant: "destructive",
+        })
       }
     }
     loadData()
+    loadBookmarks()
+    loadReadingGoal()
   }, [])
 
   useEffect(() => {
     if (currentSurah && currentRecitation) {
-      loadAudio()
+      loadVerses()
     }
-  }, [currentSurah, currentRecitation])
+  }, [currentSurah, currentRecitation]) // Removed unnecessary dependency: currentTranslation
 
   useEffect(() => {
     async function updateSurahs() {
@@ -71,37 +88,30 @@ export default function QuranPlayer() {
         setCurrentTranslation(translationsData[0] || null)
       } catch (error) {
         console.error("Error updating surahs and translations:", error)
+        toast({
+          title: "Error",
+          description: "Failed to update surahs and translations. Please try again.",
+          variant: "destructive",
+        })
       }
     }
     updateSurahs()
   }, [currentLanguage])
-
-  useEffect(() => {
-    if (currentSurah && currentTranslation) {
-      loadVerses()
-    }
-  }, [currentSurah, currentTranslation])
-
-  async function loadAudio() {
-    try {
-      if (currentRecitation && currentSurah && audioRef.current) {
-        const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
-        audioRef.current.src = audioUrl
-        await audioRef.current.load()
-      }
-    } catch (error) {
-      console.error("Error loading audio:", error)
-    }
-  }
 
   async function loadVerses() {
     try {
       if (currentSurah && currentTranslation) {
         const versesData = await fetchVerses(currentSurah.id, currentTranslation.id, currentLanguage.iso_code)
         setVerses(versesData)
+        setCurrentVerse(versesData[0] || null)
       }
     } catch (error) {
       console.error("Error loading verses:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load verses. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -117,18 +127,18 @@ export default function QuranPlayer() {
   }
 
   const playPrevious = () => {
-    if (currentSurah) {
-      const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
-      const previousIndex = (currentIndex - 1 + surahs.length) % surahs.length
-      setCurrentSurah(surahs[previousIndex])
+    if (currentVerse && verses.length > 0) {
+      const currentIndex = verses.findIndex((verse) => verse.id === currentVerse.id)
+      const previousIndex = (currentIndex - 1 + verses.length) % verses.length
+      setCurrentVerse(verses[previousIndex])
     }
   }
 
   const playNext = () => {
-    if (currentSurah) {
-      const currentIndex = surahs.findIndex((surah) => surah.id === currentSurah.id)
-      const nextIndex = (currentIndex + 1) % surahs.length
-      setCurrentSurah(surahs[nextIndex])
+    if (currentVerse && verses.length > 0) {
+      const currentIndex = verses.findIndex((verse) => verse.id === currentVerse.id)
+      const nextIndex = (currentIndex + 1) % verses.length
+      setCurrentVerse(verses[nextIndex])
     }
   }
 
@@ -164,14 +174,105 @@ export default function QuranPlayer() {
     setFilteredSurahs(filtered)
   }
 
+  const toggleBookmark = () => {
+    if (currentSurah && currentVerse) {
+      const existingBookmark = bookmarks.find((b) => b.surahId === currentSurah.id && b.verseId === currentVerse.id)
+      if (existingBookmark) {
+        const updatedBookmarks = bookmarks.filter((b) => b !== existingBookmark)
+        setBookmarks(updatedBookmarks)
+        localStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks))
+        toast({
+          title: "Bookmark Removed",
+          description: `Removed bookmark for Surah ${currentSurah.name_simple}, Verse ${currentVerse.verse_key}`,
+        })
+      } else {
+        const newBookmark: Bookmark = {
+          surahId: currentSurah.id,
+          verseId: currentVerse.id,
+          timestamp: Date.now(),
+        }
+        const updatedBookmarks = [...bookmarks, newBookmark]
+        setBookmarks(updatedBookmarks)
+        localStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks))
+        toast({
+          title: "Bookmark Added",
+          description: `Added bookmark for Surah ${currentSurah.name_simple}, Verse ${currentVerse.verse_key}`,
+        })
+      }
+    }
+  }
+
+  const loadBookmarks = () => {
+    const savedBookmarks = localStorage.getItem("bookmarks")
+    if (savedBookmarks) {
+      setBookmarks(JSON.parse(savedBookmarks))
+    }
+  }
+
+  const shareVerse = () => {
+    if (currentSurah && currentVerse) {
+      const shareText = `Quran ${currentVerse.verse_key}: ${currentVerse.translations[0].text}`
+      if (navigator.share) {
+        navigator
+          .share({
+            title: "Share Quran Verse",
+            text: shareText,
+            url: window.location.href,
+          })
+          .catch((error) => console.error("Error sharing:", error))
+      } else {
+        navigator.clipboard.writeText(shareText).then(
+          () => {
+            toast({
+              title: "Copied to Clipboard",
+              description: "The verse has been copied to your clipboard.",
+            })
+          },
+          (err) => {
+            console.error("Could not copy text: ", err)
+          },
+        )
+      }
+    }
+  }
+
+  const updateReadingGoal = (versesRead: number) => {
+    const today = new Date().toISOString().split("T")[0]
+    const updatedGoal = {
+      ...readingGoal,
+      lastReadDate: today,
+      totalVersesRead: readingGoal.totalVersesRead + versesRead,
+    }
+    setReadingGoal(updatedGoal)
+    localStorage.setItem("readingGoal", JSON.stringify(updatedGoal))
+
+    if (updatedGoal.totalVersesRead >= updatedGoal.versesPerDay) {
+      toast({
+        title: "Goal Achieved!",
+        description: `You've reached your daily reading goal of ${updatedGoal.versesPerDay} verses!`,
+      })
+    }
+  }
+
+  const loadReadingGoal = () => {
+    const savedGoal = localStorage.getItem("readingGoal")
+    if (savedGoal) {
+      setReadingGoal(JSON.parse(savedGoal))
+    }
+  }
+
   return (
     <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">Quran Player</h1>
+        <DarkModeToggle />
+      </div>
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <div>
-          <h2 className="mb-4 text-2xl font-semibold text-emerald-800 dark:text-emerald-200">Surah List</h2>
+          <h2 className="mb-4 text-xl font-semibold text-emerald-800 dark:text-emerald-200">Surah List</h2>
           <div className="mb-4 space-y-2">
             <Select
-              value={currentLanguage.iso_code}
+              value={currentLanguage?.iso_code || ""}
               onValueChange={(value) => {
                 const newLanguage = languages.find((lang) => lang.iso_code === value)
                 if (newLanguage) {
@@ -272,21 +373,15 @@ export default function QuranPlayer() {
             </Select>
           </div>
           <div className="flex items-center justify-center space-x-4">
-            <button
-              onClick={playPrevious}
-              className="rounded-full bg-emerald-200 p-3 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200"
-            >
-              <SkipBack className="h-6 w-6" />
-            </button>
-            <button onClick={togglePlay} className="rounded-full bg-emerald-500 p-4 text-white">
-              {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
-            </button>
-            <button
-              onClick={playNext}
-              className="rounded-full bg-emerald-200 p-3 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200"
-            >
-              <SkipForward className="h-6 w-6" />
-            </button>
+            <Button onClick={playPrevious} size="icon" variant="outline">
+              <SkipBack className="h-4 w-4" />
+            </Button>
+            <Button onClick={togglePlay} size="icon" variant="default">
+              {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+            </Button>
+            <Button onClick={playNext} size="icon" variant="outline">
+              <SkipForward className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -314,6 +409,7 @@ export default function QuranPlayer() {
       </div>
       <audio
         ref={audioRef}
+        src={currentVerse?.audio.url}
         onTimeUpdate={handleTimeUpdate}
         onEnded={playNext}
         onLoadedMetadata={() => {
@@ -323,14 +419,35 @@ export default function QuranPlayer() {
         }}
       />
       <div className="mt-8">
-        <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Verses</h4>
-        <div className="max-h-96 space-y-4 overflow-y-auto scrollbar-hide">
-          {verses.map((verse) => (
-            <div key={verse.id} className="rounded-lg bg-emerald-50 p-4 dark:bg-emerald-900 dark:text-emerald-100">
-              <p className="text-sm font-semibold">{verse.text_uthmani}</p>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{verse.translations[0]?.text}</p>
+        <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Current Verse</h4>
+        {currentVerse && (
+          <div className="rounded-lg bg-emerald-50 p-4 dark:bg-emerald-900 dark:text-emerald-100">
+            <p className="text-lg font-semibold">{currentVerse.text_uthmani}</p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{currentVerse.translations[0]?.text}</p>
+            <div className="mt-4 flex justify-end space-x-2">
+              <Button onClick={toggleBookmark} size="sm" variant="outline">
+                <Bookmark className="mr-2 h-4 w-4" />
+                Bookmark
+              </Button>
+              <Button onClick={shareVerse} size="sm" variant="outline">
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
             </div>
-          ))}
+          </div>
+        )}
+      </div>
+      <div className="mt-8">
+        <h4 className="mb-4 text-lg font-semibold text-emerald-800 dark:text-emerald-200">Reading Goal</h4>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Daily Goal: {readingGoal.versesPerDay} verses</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Progress: {readingGoal.totalVersesRead} / {readingGoal.versesPerDay}
+          </p>
+          <Button onClick={() => updateReadingGoal(1)} size="sm" variant="outline">
+            <Target className="mr-2 h-4 w-4" />
+            Mark as Read
+          </Button>
         </div>
       </div>
     </div>
