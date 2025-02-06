@@ -7,23 +7,24 @@ import { fetchSurahs, fetchRecitations, fetchAudioUrl, fetchLanguages, fetchTran
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import type { Surah, Recitation, Language, Translation, Verse } from "@/types/quran"
 
 export default function QuranPlayer() {
-  const [surahs, setSurahs] = useState([])
-  const [recitations, setRecitations] = useState([])
-  const [languages, setLanguages] = useState([])
-  const [translations, setTranslations] = useState([])
-  const [currentSurah, setCurrentSurah] = useState(null)
-  const [currentRecitation, setCurrentRecitation] = useState(null)
-  const [currentLanguage, setCurrentLanguage] = useState({ iso_code: "en", native_name: "English" })
-  const [currentTranslation, setCurrentTranslation] = useState(null)
+  const [surahs, setSurahs] = useState<Surah[]>([])
+  const [recitations, setRecitations] = useState<Recitation[]>([])
+  const [languages, setLanguages] = useState<Language[]>([])
+  const [translations, setTranslations] = useState<Translation[]>([])
+  const [currentSurah, setCurrentSurah] = useState<Surah | null>(null)
+  const [currentRecitation, setCurrentRecitation] = useState<Recitation | null>(null)
+  const [currentLanguage, setCurrentLanguage] = useState<Language>({ iso_code: "en", native_name: "English" })
+  const [currentTranslation, setCurrentTranslation] = useState<Translation | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [volume, setVolume] = useState(1)
-  const [verses, setVerses] = useState([])
+  const [verses, setVerses] = useState<Verse[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filteredSurahs, setFilteredSurahs] = useState([])
+  const [filteredSurahs, setFilteredSurahs] = useState<Surah[]>([])
   const audioRef = useRef(null)
 
   useEffect(() => {
