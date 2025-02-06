@@ -83,9 +83,11 @@ export default function QuranPlayer() {
 
   async function loadAudio() {
     try {
-      const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
-      audioRef.current.src = audioUrl
-      audioRef.current.load()
+      if (currentRecitation && currentSurah) {
+        const audioUrl = await fetchAudioUrl(currentRecitation.id, currentSurah.id)
+        audioRef.current.src = audioUrl
+        audioRef.current.load()
+      }
     } catch (error) {
       console.error("Error loading audio:", error)
     }
