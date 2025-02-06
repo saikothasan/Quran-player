@@ -1,17 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  Search,
-  BookmarkIcon as QuranBookmark,
-  Share2,
-  Target,
-} from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Volume2, Search, Bookmark, Share2, Target } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { fetchSurahs, fetchRecitations, fetchLanguages, fetchTranslations, fetchVerses } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -444,7 +434,7 @@ export default function QuranPlayer() {
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{currentVerse.translations[0]?.text}</p>
             <div className="mt-4 flex justify-end space-x-2">
               <Button onClick={toggleBookmark} size="sm" variant="outline">
-                <QuranBookmark className="mr-2 h-4 w-4" />
+                <Bookmark className="mr-2 h-4 w-4" />
                 Bookmark
               </Button>
               <Button onClick={shareVerse} size="sm" variant="outline">
